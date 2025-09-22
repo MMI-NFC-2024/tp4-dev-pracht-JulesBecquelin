@@ -1,0 +1,298 @@
+---
+import PlotFigure from "../components/PlotFigure.astro";
+import Layout from "../layouts/Layout.astro";
+import * as Plot from "@observablehq/plot";
+import penguins from "../assets/penguins.json";
+---
+
+
+
+<style>
+        .filters {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        label {
+            font-weight: bold;
+        }
+        select {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #stats {
+            background-color: #f0f8ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .chart-type {
+            margin-bottom: 20px;
+        }
+        .chart-type label {
+            margin-right: 15px;
+        }
+    </style>
+</head>
+<body>
+    <nav style="margin-bottom: 20px;">
+        <a href="/">Accueil</a>
+        <a href="/simplePlot">Simple</a> 
+        <a href="/simplePenguin">Simple Penguin</a> 
+        <a href="/penguinFilter">Penguin avec filtre</a> 
+        <a href="/penguinMultiFilter">Penguin multi-filtres</a>
+    </nav>
+    
+    <h1>Dataset Voitures - Consommation et Performance</h1>
+    
+    <div class="chart-type">
+        <label><input type="radio" name="chartType" value="scatter" checked> Nuage de points</label>
+        <label><input type="radio" name="chartType" value="bar"> Graphique en barres</label>
+    </div>
+    
+    <div class="filters">
+        <div class="filter-group">
+            <label for="origin">Origine :</label>
+            <select name="origin" id="origin">
+                <option value="">Toutes les origines</option>
+                <option value="USA">USA</option>
+                <option value="Europe">Europe</option>
+                <option value="Japan">Japon</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="cylinders">Cylindres :</label>
+            <select name="cylinders" id="cylinders">
+                <option value="">Tous</option>
+                <option value="4">4 cylindres</option>
+                <option value="6">6 cylindres</option>
+                <option value="8">8 cylindres</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="year-range">Année :</label>
+            <select name="year-range" id="year-range">
+                <option value="">Toutes les années</option>
+                <option value="70-75">1970-1975</option>
+                <option value="76-80">1976-1980</option>
+                <option value="81-82">1981-1982</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <button id="reset-filters" style="align-self: end; padding: 5px 10px; background-color: #e0e0e0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Réinitialiser</button>
+        </div>
+    </div>
+    
+    <div id="stats"></div>
+    <div id="plot"></div>
+
+    <script type="module">
+        import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+        
+        // Dataset des voitures (inspiré du dataset mtcars/auto-mpg)
+        const cars = [
+            {"name": "chevrolet chevelle malibu", "mpg": 18.0, "cylinders": 8, "displacement": 307.0, "horsepower": 130, "weight": 3504, "acceleration": 12.0, "year": 70, "origin": "USA"},
+            {"name": "buick skylark 320", "mpg": 15.0, "cylinders": 8, "displacement": 350.0, "horsepower": 165, "weight": 3693, "acceleration": 11.5, "year": 70, "origin": "USA"},
+            {"name": "plymouth satellite", "mpg": 18.0, "cylinders": 8, "displacement": 318.0, "horsepower": 150, "weight": 3436, "acceleration": 11.0, "year": 70, "origin": "USA"},
+            {"name": "amc rebel sst", "mpg": 16.0, "cylinders": 8, "displacement": 304.0, "horsepower": 150, "weight": 3433, "acceleration": 12.0, "year": 70, "origin": "USA"},
+            {"name": "ford torino", "mpg": 17.0, "cylinders": 8, "displacement": 302.0, "horsepower": 140, "weight": 3449, "acceleration": 10.5, "year": 70, "origin": "USA"},
+            {"name": "ford galaxie 500", "mpg": 15.0, "cylinders": 8, "displacement": 429.0, "horsepower": 198, "weight": 4341, "acceleration": 10.0, "year": 70, "origin": "USA"},
+            {"name": "chevrolet impala", "mpg": 14.0, "cylinders": 8, "displacement": 454.0, "horsepower": 220, "weight": 4354, "acceleration": 9.0, "year": 70, "origin": "USA"},
+            {"name": "datsun pl510", "mpg": 27.0, "cylinders": 4, "displacement": 97.0, "horsepower": 88, "weight": 2130, "acceleration": 14.5, "year": 70, "origin": "Japan"},
+            {"name": "volkswagen 1131 deluxe sedan", "mpg": 26.0, "cylinders": 4, "displacement": 97.0, "horsepower": 46, "weight": 1835, "acceleration": 20.5, "year": 70, "origin": "Europe"},
+            {"name": "peugeot 504", "mpg": 25.0, "cylinders": 4, "displacement": 110.0, "horsepower": 87, "weight": 2672, "acceleration": 17.5, "year": 70, "origin": "Europe"},
+            {"name": "audi 100 ls", "mpg": 24.0, "cylinders": 4, "displacement": 107.0, "horsepower": 90, "weight": 2430, "acceleration": 14.5, "year": 70, "origin": "Europe"},
+            {"name": "saab 99e", "mpg": 25.0, "cylinders": 4, "displacement": 104.0, "horsepower": 95, "weight": 2375, "acceleration": 17.5, "year": 70, "origin": "Europe"},
+            {"name": "bmw 2002", "mpg": 26.0, "cylinders": 4, "displacement": 121.0, "horsepower": 113, "weight": 2234, "acceleration": 12.5, "year": 70, "origin": "Europe"},
+            {"name": "toyota corona", "mpg": 25.0, "cylinders": 4, "displacement": 108.0, "horsepower": 93, "weight": 2372, "acceleration": 15.5, "year": 70, "origin": "Japan"},
+            {"name": "ford pinto", "mpg": 25.0, "cylinders": 4, "displacement": 140.0, "horsepower": 88, "weight": 2720, "acceleration": 15.5, "year": 71, "origin": "USA"},
+            {"name": "amc gremlin", "mpg": 21.0, "cylinders": 6, "displacement": 232.0, "horsepower": 100, "weight": 2914, "acceleration": 16.0, "year": 75, "origin": "USA"},
+            {"name": "ford mustang", "mpg": 19.0, "cylinders": 6, "displacement": 250.0, "horsepower": 105, "weight": 3353, "acceleration": 14.5, "year": 76, "origin": "USA"},
+            {"name": "chevrolet nova", "mpg": 22.0, "cylinders": 6, "displacement": 250.0, "horsepower": 105, "weight": 3012, "acceleration": 15.5, "year": 76, "origin": "USA"},
+            {"name": "datsun 280z", "mpg": 28.0, "cylinders": 6, "displacement": 168.0, "horsepower": 132, "weight": 2910, "acceleration": 11.4, "year": 80, "origin": "Japan"},
+            {"name": "mazda rx-7 gs", "mpg": 23.7, "cylinders": 4, "displacement": 140.0, "horsepower": 101, "weight": 2330, "acceleration": 13.5, "year": 81, "origin": "Japan"},
+            {"name": "honda accord", "mpg": 32.0, "cylinders": 4, "displacement": 107.0, "horsepower": 75, "weight": 2210, "acceleration": 14.4, "year": 81, "origin": "Japan"},
+            {"name": "toyota tercel", "mpg": 37.0, "cylinders": 4, "displacement": 89.0, "horsepower": 62, "weight": 2050, "acceleration": 17.3, "year": 81, "origin": "Japan"},
+            {"name": "datsun 310", "mpg": 37.2, "cylinders": 4, "displacement": 86.0, "horsepower": 65, "weight": 2019, "acceleration": 16.4, "year": 81, "origin": "Japan"},
+            {"name": "chevrolet citation", "mpg": 28.0, "cylinders": 4, "displacement": 151.0, "horsepower": 90, "weight": 2678, "acceleration": 16.5, "year": 80, "origin": "USA"},
+            {"name": "ford escort 4w", "mpg": 34.0, "cylinders": 4, "displacement": 98.0, "horsepower": 65, "weight": 2045, "acceleration": 16.2, "year": 81, "origin": "USA"},
+            {"name": "ford escort 2h", "mpg": 35.0, "cylinders": 4, "displacement": 98.0, "horsepower": 65, "weight": 2055, "acceleration": 16.4, "year": 82, "origin": "USA"},
+            {"name": "volkswagen rabbit", "mpg": 36.0, "cylinders": 4, "displacement": 120.0, "horsepower": 88, "weight": 2160, "acceleration": 14.5, "year": 82, "origin": "Europe"},
+            {"name": "mazda glc deluxe", "mpg": 36.0, "cylinders": 4, "displacement": 86.0, "horsepower": 65, "weight": 2019, "acceleration": 16.4, "year": 80, "origin": "Japan"}
+        ];
+        
+        // Éléments du DOM
+        const selectOrigin = document.getElementById("origin");
+        const selectCylinders = document.getElementById("cylinders");
+        const selectYearRange = document.getElementById("year-range");
+        const resetButton = document.getElementById("reset-filters");
+        const chartTypeRadios = document.querySelectorAll('input[name="chartType"]');
+        
+        function updateStats(data) {
+            const statsDiv = document.getElementById("stats");
+            const count = data.length;
+            
+            if (count === 0) {
+                statsDiv.innerHTML = "<strong>Aucune voiture trouvée avec ces critères</strong>";
+                return;
+            }
+            
+            const avgMpg = (data.reduce((sum, d) => sum + d.mpg, 0) / count).toFixed(1);
+            const avgHorsepower = (data.reduce((sum, d) => sum + d.horsepower, 0) / count).toFixed(0);
+            
+            const originCount = {};
+            data.forEach(d => {
+                originCount[d.origin] = (originCount[d.origin] || 0) + 1;
+            });
+            
+            const originInfo = Object.entries(originCount)
+                .map(([origin, count]) => `${origin}: ${count}`)
+                .join(", ");
+            
+            statsDiv.innerHTML = `
+                <strong>Données affichées :</strong> ${count} voitures (${originInfo})<br>
+                <strong>Moyennes :</strong> Consommation: ${avgMpg} mpg, Puissance: ${avgHorsepower} hp
+            `;
+        }
+        
+        function renderPlot() {
+            const origin = selectOrigin.value;
+            const cylinders = selectCylinders.value;
+            const yearRange = selectYearRange.value;
+            const chartType = document.querySelector('input[name="chartType"]:checked').value;
+            
+            const plotDiv = document.getElementById("plot");
+            plotDiv.innerHTML = "";
+            
+            // Filtrage des données
+            let filteredCars = [...cars];
+            
+            if (origin) {
+                filteredCars = filteredCars.filter(d => d.origin === origin);
+            }
+            
+            if (cylinders) {
+                filteredCars = filteredCars.filter(d => d.cylinders == parseInt(cylinders));
+            }
+            
+            if (yearRange) {
+                const [start, end] = yearRange.split('-').map(x => parseInt(x));
+                filteredCars = filteredCars.filter(d => d.year >= start && d.year <= end);
+            }
+            
+            updateStats(filteredCars);
+            
+            if (filteredCars.length === 0) return;
+            
+            // Titre dynamique
+            const filters = [];
+            if (origin) filters.push(`Origine: ${origin}`);
+            if (cylinders) filters.push(`${cylinders} cylindres`);
+            if (yearRange) filters.push(`Années ${yearRange.replace('-', '-19')}`);
+            
+            const title = filters.length > 0 
+                ? `Voitures filtrées (${filters.join(", ")})`
+                : "Toutes les voitures";
+            
+            let plot;
+            
+            if (chartType === "scatter") {
+                // Graphique en nuage de points (consommation vs puissance)
+                plot = Plot.plot({
+                    marks: [
+                        Plot.dot(filteredCars, {
+                            x: "horsepower",
+                            y: "mpg",
+                            stroke: "origin",
+                            fill: "origin",
+                            r: d => Math.sqrt(d.cylinders) * 2,
+                            fillOpacity: 0.6,
+                            strokeWidth: 2,
+                            title: d => `${d.name}\n${d.mpg} mpg, ${d.horsepower} hp, ${d.cylinders} cyl.`
+                        })
+                    ],
+                    x: {
+                        label: "Puissance (hp)",
+                        nice: true
+                    },
+                    y: {
+                        label: "Consommation (miles par gallon)",
+                        nice: true
+                    },
+                    color: {
+                        legend: true
+                    },
+                    title: title
+                });
+            } else {
+                // Graphique en barres (consommation moyenne par origine)
+                const avgByOrigin = {};
+                filteredCars.forEach(d => {
+                    if (!avgByOrigin[d.origin]) {
+                        avgByOrigin[d.origin] = { sum: 0, count: 0 };
+                    }
+                    avgByOrigin[d.origin].sum += d.mpg;
+                    avgByOrigin[d.origin].count++;
+                });
+                
+                const barData = Object.entries(avgByOrigin).map(([origin, data]) => ({
+                    origin: origin,
+                    avgMpg: data.sum / data.count
+                }));
+                
+                plot = Plot.plot({
+                    marks: [
+                        Plot.barY(barData, {
+                            x: "origin",
+                            y: "avgMpg",
+                            fill: "origin"
+                        })
+                    ],
+                    x: {
+                        label: "Origine"
+                    },
+                    y: {
+                        label: "Consommation moyenne (mpg)",
+                        nice: true
+                    },
+                    color: {
+                        legend: true
+                    },
+                    title: `${title} - Consommation moyenne par origine`
+                });
+            }
+            
+            plotDiv.appendChild(plot);
+        }
+        
+        function resetFilters() {
+            selectOrigin.value = "";
+            selectCylinders.value = "";
+            selectYearRange.value = "";
+            document.querySelector('input[name="chartType"][value="scatter"]').checked = true;
+            renderPlot();
+        }
+        
+        // Écouteurs d'événements
+        selectOrigin.addEventListener("change", renderPlot);
+        selectCylinders.addEventListener("change", renderPlot);
+        selectYearRange.addEventListener("change", renderPlot);
+        resetButton.addEventListener("click", resetFilters);
+        chartTypeRadios.forEach(radio => {
+            radio.addEventListener("change", renderPlot);
+        });
+        
+        // Rendu initial
+        renderPlot();
+    </script>
+</body>

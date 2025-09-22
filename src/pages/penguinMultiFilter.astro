@@ -1,0 +1,319 @@
+---
+import PlotFigure from "../components/PlotFigure.astro";
+import Layout from "../layouts/Layout.astro";
+import * as Plot from "@observablehq/plot";
+import penguins from "../assets/penguins.json";
+---
+
+
+
+
+<Layout>
+
+<nav style="margin-bottom: 20px;">
+        <a href="/">Accueil</a>
+        <a href="/simplePlot">Simple</a> 
+        <a href="/simplePenguin">Simple Penguin</a> 
+        <a href="/penguinFilter">Penguin avec filtre</a> 
+        <a href="/penguinMultiFilter">Penguin multi-filtres</a>
+    </nav>
+
+
+<div class="page-container">
+    <h1 class="page-title">Penguin multi-filtres - Espèce, île et sexe</h1>
+    
+    <div class="filters-card">
+      <div class="filter-group">
+        <label for="species" class="filter-label">Espèce :</label>
+        <select name="species" id="species" class="filter-select">
+          <option value="">Toutes les espèces</option>
+          <option value="Adelie">Adelie</option>
+          <option value="Chinstrap">Chinstrap</option>
+          <option value="Gentoo">Gentoo</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="island" class="filter-label">Île :</label>
+        <select name="island" id="island" class="filter-select">
+          <option value="">Toutes les îles</option>
+          <option value="Biscoe">Biscoe</option>
+          <option value="Dream">Dream</option>
+          <option value="Torgersen">Torgersen</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="sex" class="filter-label">Sexe :</label>
+        <select name="sex" id="sex" class="filter-select">
+          <option value="">Tous</option>
+          <option value="MALE">Mâle</option>
+          <option value="FEMALE">Femelle</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <button id="reset-filters" class="reset-button">Réinitialiser</button>
+      </div>
+    </div>
+    
+    <div id="stats" class="stats-box"></div>
+    <div id="plot" class="plot-card"></div>
+  </div>
+
+    <script type="module">
+        // Import Plot depuis CDN
+        import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+        
+        // Données étendues des manchots
+        const penguins = [
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 39.1, "culmen_depth_mm": 18.7, "flipper_length_mm": 181, "body_mass_g": 3750, "sex": "MALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 39.5, "culmen_depth_mm": 17.4, "flipper_length_mm": 186, "body_mass_g": 3800, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 40.3, "culmen_depth_mm": 18, "flipper_length_mm": 195, "body_mass_g": 3250, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 36.7, "culmen_depth_mm": 19.3, "flipper_length_mm": 193, "body_mass_g": 3450, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 39.3, "culmen_depth_mm": 20.6, "flipper_length_mm": 190, "body_mass_g": 3650, "sex": "MALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 38.9, "culmen_depth_mm": 17.8, "flipper_length_mm": 181, "body_mass_g": 3625, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 39.2, "culmen_depth_mm": 19.6, "flipper_length_mm": 195, "body_mass_g": 4675, "sex": "MALE"},
+            {"species": "Adelie", "island": "Biscoe", "culmen_length_mm": 37.8, "culmen_depth_mm": 18.3, "flipper_length_mm": 174, "body_mass_g": 3400, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Biscoe", "culmen_length_mm": 37.7, "culmen_depth_mm": 18.7, "flipper_length_mm": 180, "body_mass_g": 3600, "sex": "MALE"},
+            {"species": "Adelie", "island": "Biscoe", "culmen_length_mm": 35.9, "culmen_depth_mm": 19.2, "flipper_length_mm": 189, "body_mass_g": 3800, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Dream", "culmen_length_mm": 39.5, "culmen_depth_mm": 16.7, "flipper_length_mm": 178, "body_mass_g": 3250, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Dream", "culmen_length_mm": 37.2, "culmen_depth_mm": 18.1, "flipper_length_mm": 178, "body_mass_g": 3900, "sex": "MALE"},
+            {"species": "Adelie", "island": "Dream", "culmen_length_mm": 39.5, "culmen_depth_mm": 17.8, "flipper_length_mm": 188, "body_mass_g": 3300, "sex": "FEMALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 46.5, "culmen_depth_mm": 17.9, "flipper_length_mm": 192, "body_mass_g": 3500, "sex": "FEMALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 50, "culmen_depth_mm": 19.5, "flipper_length_mm": 196, "body_mass_g": 3900, "sex": "MALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 51.3, "culmen_depth_mm": 19.2, "flipper_length_mm": 193, "body_mass_g": 3650, "sex": "MALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 45.4, "culmen_depth_mm": 18.7, "flipper_length_mm": 188, "body_mass_g": 3525, "sex": "FEMALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 52.7, "culmen_depth_mm": 19.8, "flipper_length_mm": 197, "body_mass_g": 3725, "sex": "MALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 45.2, "culmen_depth_mm": 17.8, "flipper_length_mm": 198, "body_mass_g": 3950, "sex": "FEMALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 46.1, "culmen_depth_mm": 13.2, "flipper_length_mm": 211, "body_mass_g": 4500, "sex": "FEMALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 50, "culmen_depth_mm": 16.3, "flipper_length_mm": 230, "body_mass_g": 5700, "sex": "MALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 48.7, "culmen_depth_mm": 14.1, "flipper_length_mm": 210, "body_mass_g": 4450, "sex": "FEMALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 50, "culmen_depth_mm": 15.2, "flipper_length_mm": 218, "body_mass_g": 5700, "sex": "MALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 47.6, "culmen_depth_mm": 14.5, "flipper_length_mm": 215, "body_mass_g": 5400, "sex": "MALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 46.5, "culmen_depth_mm": 13.5, "flipper_length_mm": 210, "body_mass_g": 4550, "sex": "FEMALE"}
+        ];
+        
+        // Récupération des éléments de filtre
+        const selectSpecies = document.getElementById("species");
+        const selectIsland = document.getElementById("island");
+        const selectSex = document.getElementById("sex");
+        const resetButton = document.getElementById("reset-filters");
+        
+        // Fonction pour afficher les statistiques
+        function updateStats(data) {
+            const statsDiv = document.getElementById("stats");
+            const count = data.length;
+            
+            if (count === 0) {
+                statsDiv.innerHTML = "<strong>Aucun manchot trouvé avec ces critères</strong>";
+                return;
+            }
+            
+            const speciesCount = {};
+            data.forEach(d => {
+                speciesCount[d.species] = (speciesCount[d.species] || 0) + 1;
+            });
+            
+            const speciesInfo = Object.entries(speciesCount)
+                .map(([species, count]) => `${species}: ${count}`)
+                .join(", ");
+            
+            statsDiv.innerHTML = `<strong>Données affichées :</strong> ${count} manchots (${speciesInfo})`;
+        }
+        
+        // Fonction pour afficher le graphique
+        function renderPlot() {
+            // Récupération des valeurs des filtres
+            const species = selectSpecies.value;
+            const island = selectIsland.value;
+            const sex = selectSex.value;
+            
+            // Sélection de la div du graphique
+            const plotDiv = document.getElementById("plot");
+            plotDiv.innerHTML = "";
+            
+            // Filtrage des données
+            let filteredPenguins = penguins.filter(d => 
+                d.culmen_length_mm != null && d.culmen_depth_mm != null
+            );
+            
+            if (species) {
+                filteredPenguins = filteredPenguins.filter(d => d.species === species);
+            }
+            
+            if (island) {
+                filteredPenguins = filteredPenguins.filter(d => d.island === island);
+            }
+            
+            if (sex) {
+                filteredPenguins = filteredPenguins.filter(d => d.sex === sex);
+            }
+            
+            // Mise à jour des statistiques
+            updateStats(filteredPenguins);
+            
+            // Création du titre dynamique
+            const filters = [];
+            if (species) filters.push(`Espèce: ${species}`);
+            if (island) filters.push(`Île: ${island}`);
+            if (sex) filters.push(`Sexe: ${sex === 'MALE' ? 'Mâle' : 'Femelle'}`);
+            
+            const title = filters.length > 0 
+                ? `Manchots filtrés (${filters.join(", ")})`
+                : "Tous les manchots";
+            
+            // Création du graphique si il y a des données
+            if (filteredPenguins.length > 0) {
+                const plot = Plot.plot({
+                    marks: [
+                        Plot.dot(filteredPenguins, {
+                            x: "culmen_length_mm",
+                            y: "culmen_depth_mm",
+                            stroke: "species",
+                            fill: "sex",
+                            strokeWidth: 2,
+                            r: 6,
+                            fillOpacity: 0.6
+                        }),
+                    ],
+                    x: {
+                        label: "Longueur du bec (mm)",
+                        nice: true
+                    },
+                    y: {
+                        label: "Profondeur du bec (mm)",
+                        nice: true
+                    },
+                    color: {
+                        legend: true
+                    },
+                    title: title
+                });
+                
+                plotDiv.appendChild(plot);
+            }
+        }
+        
+        // Fonction de réinitialisation des filtres
+        function resetFilters() {
+            selectSpecies.value = "";
+            selectIsland.value = "";
+            selectSex.value = "";
+            renderPlot();
+        }
+        
+        // Ajout des écouteurs d'événements
+        selectSpecies.addEventListener("change", renderPlot);
+        selectIsland.addEventListener("change", renderPlot);
+        selectSex.addEventListener("change", renderPlot);
+        resetButton.addEventListener("click", resetFilters);
+        
+        // Affichage initial
+        renderPlot();
+    </script>
+    <style>
+        .page-container {
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background: #f7f9fc;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* Titre */
+.page-title {
+  text-align: center;
+  margin: 20px 0;
+  font-size: 2rem;
+  color: #2c3e50;
+}
+
+/* Carte des filtres */
+.filters-card {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 20px auto;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  max-width: 900px;
+}
+
+/* Groupe de filtres */
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.filter-label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #555;
+}
+
+.filter-select {
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.filter-select:hover {
+  border-color: #3498db;
+  box-shadow: 0 0 5px rgba(52,152,219,0.2);
+}
+
+/* Bouton */
+.reset-button {
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  border: none;
+  background: #3498db;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.reset-button:hover {
+  background: #2980b9;
+}
+
+/* Statistiques */
+.stats-box {
+  text-align: center;
+  margin: 20px auto;
+  font-size: 1.05rem;
+  color: #444;
+  font-weight: 500;
+}
+
+/* Graphique */
+.plot-card {
+  display: flex;
+  justify-content: center;
+  margin: 30px auto;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  max-width: 1000px;
+  overflow-x: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .filters-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+    </style>
+    </Layout>

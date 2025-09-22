@@ -1,0 +1,113 @@
+---
+import PlotFigure from "../components/PlotFigure.astro";
+import Layout from "../layouts/Layout.astro";
+import * as Plot from "@observablehq/plot";
+import penguins from "../assets/penguins.json";
+---
+
+
+
+
+<Layout>
+    <nav style="margin-bottom: 20px;">
+        <a href="/">Accueil</a>
+        <a href="/simplePlot">Simple</a> 
+        <a href="/simplePenguin">Simple Penguin</a> 
+        <a href="/penguinFilter">Penguin avec filtre</a> 
+        <a href="/penguinMultiFilter">Penguin multi-filtres</a>
+    </nav>
+<h1>Penguin avec filtre - Sélection par espèce</h1>
+    
+    <div style="margin-bottom: 20px;">
+        <label for="species">Choisir une espèce :</label>
+        <select name="species" id="species">
+            <option value="">Toutes les espèces</option>
+            <option value="Adelie">Adelie</option>
+            <option value="Chinstrap">Chinstrap</option>
+            <option value="Gentoo">Gentoo</option>
+        </select>
+    </div>
+    
+    <div id="plot"></div>
+
+    <script type="module">
+        // Import Plot depuis CDN
+        import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+        
+        // Données complètes des manchots (échantillon représentatif)
+        const penguins = [
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 39.1, "culmen_depth_mm": 18.7, "flipper_length_mm": 181, "body_mass_g": 3750, "sex": "MALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 39.5, "culmen_depth_mm": 17.4, "flipper_length_mm": 186, "body_mass_g": 3800, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 40.3, "culmen_depth_mm": 18, "flipper_length_mm": 195, "body_mass_g": 3250, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 36.7, "culmen_depth_mm": 19.3, "flipper_length_mm": 193, "body_mass_g": 3450, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Torgersen", "culmen_length_mm": 39.3, "culmen_depth_mm": 20.6, "flipper_length_mm": 190, "body_mass_g": 3650, "sex": "MALE"},
+            {"species": "Adelie", "island": "Biscoe", "culmen_length_mm": 37.8, "culmen_depth_mm": 18.3, "flipper_length_mm": 174, "body_mass_g": 3400, "sex": "FEMALE"},
+            {"species": "Adelie", "island": "Dream", "culmen_length_mm": 39.5, "culmen_depth_mm": 16.7, "flipper_length_mm": 178, "body_mass_g": 3250, "sex": "FEMALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 46.5, "culmen_depth_mm": 17.9, "flipper_length_mm": 192, "body_mass_g": 3500, "sex": "FEMALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 50, "culmen_depth_mm": 19.5, "flipper_length_mm": 196, "body_mass_g": 3900, "sex": "MALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 51.3, "culmen_depth_mm": 19.2, "flipper_length_mm": 193, "body_mass_g": 3650, "sex": "MALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 45.4, "culmen_depth_mm": 18.7, "flipper_length_mm": 188, "body_mass_g": 3525, "sex": "FEMALE"},
+            {"species": "Chinstrap", "island": "Dream", "culmen_length_mm": 52.7, "culmen_depth_mm": 19.8, "flipper_length_mm": 197, "body_mass_g": 3725, "sex": "MALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 46.1, "culmen_depth_mm": 13.2, "flipper_length_mm": 211, "body_mass_g": 4500, "sex": "FEMALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 50, "culmen_depth_mm": 16.3, "flipper_length_mm": 230, "body_mass_g": 5700, "sex": "MALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 48.7, "culmen_depth_mm": 14.1, "flipper_length_mm": 210, "body_mass_g": 4450, "sex": "FEMALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 50, "culmen_depth_mm": 15.2, "flipper_length_mm": 218, "body_mass_g": 5700, "sex": "MALE"},
+            {"species": "Gentoo", "island": "Biscoe", "culmen_length_mm": 47.6, "culmen_depth_mm": 14.5, "flipper_length_mm": 215, "body_mass_g": 5400, "sex": "MALE"}
+        ];
+        
+        // Récupère l'élément select pour choisir l'espèce
+        const selectSpecies = document.getElementById("species");
+        
+        // Fonction pour afficher le graphique
+        function renderPlot() {
+            // Récupère l'espèce sélectionnée
+            const species = selectSpecies.value;
+            
+            // Sélectionne la div où le graphique sera affiché
+            const plotDiv = document.getElementById("plot");
+            
+            // Vide le contenu précédent de la div
+            plotDiv.innerHTML = "";
+            
+            // Filtre les données selon l'espèce sélectionnée
+            const filteredPenguins = species 
+                ? penguins.filter(d => d.species === species && d.culmen_length_mm != null && d.culmen_depth_mm != null)
+                : penguins.filter(d => d.culmen_length_mm != null && d.culmen_depth_mm != null);
+            
+            // Crée le graphique avec Plot
+            const plot = Plot.plot({
+                marks: [
+                    // Ajoute les points du graphique, filtrés selon l'espèce choisie
+                    Plot.dot(filteredPenguins, {
+                        x: "culmen_length_mm", // Axe X : longueur du bec
+                        y: "culmen_depth_mm", // Axe Y : profondeur du bec
+                        stroke: "species", // Couleur selon l'espèce
+                        strokeWidth: 2,
+                        r: 5
+                    }),
+                ],
+                x: {
+                    label: "Longueur du bec (mm)",
+                    nice: true
+                },
+                y: {
+                    label: "Profondeur du bec (mm)", 
+                    nice: true
+                },
+                color: {
+                    legend: true
+                },
+                title: species ? `Manchots ${species}` : "Tous les manchots"
+            });
+            
+            // Ajoute le graphique à la div
+            plotDiv.appendChild(plot);
+        }
+        
+        // Ajoute un écouteur d'événement pour le changement d'espèce
+        selectSpecies.addEventListener("change", renderPlot);
+        
+        // Affiche le graphique au chargement de la page
+        renderPlot();
+    </script>
+    </Layout>
